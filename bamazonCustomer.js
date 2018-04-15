@@ -24,35 +24,56 @@ connection.connect(function(err) {
   showItem();
 });
 
-function showItem() {
-  connection.query("SELECT * FROM products", function(err, res) {
-    if (err) throw err;
 
-    var tab = " | ";
-    
-    for (var i = 0; i < res.length; i++) {
-      console.log("item "+ res[i].item_id + tab + res[i].product_name + tab +
-        res[i].department_name + tab + res[i].price + tab + res[i].stock_quantity);
+function showItem() {
+  query = "SELECT * FROM products";
+
+    connection.query(query, function(err, res) {
+        if (err) throw err;
+
+        console.log("Store Inventory");
+        console.log("---------------\n");
+
+        var itemInfo = "";
+        for (var i = 0; i < res.length; i++) {
+            itemInfo = "";
+            itemInfo += "Item ID: " + res[i].item_id;
+            itemInfo += " | Product Name: " + res[i].product_name;
+            itemInfo += " | Price: $" + res[i].price;
+            itemInfo += " | Quantity: " + res[i].stock_quantity;
+            console.log(itemInfo);
     }
     userInput(res);
   });
 };
 
+
+
 function userInput(res) {
   inquirer.prompt([
     {
     type: "input",
-    message: "What item would you like to purchase?",
-    name: "choice"
+    message: "Enter the Item ID you would like to purchase: ",
+    name: "choice",
+    validate: function (value) {
+      if (isNaN(value) === false) {
+          return true;
+      }
+      return false;
     }
-]).then(function(answer) {
+  }
+]).then(function(value) {
 
+  query = "SELECT * FROM products";
+
+    connection.query(query, function(err, res) {
+        if (err) throw err;
 
     for (var i = 0; i < res.length; i++) {
 
-      if ((res[i].product_name === answer.choice) || (res[i].item_id === answer.choice)) {
+      if (res[i].item_id == value.choice) {
         
-        var itemSelect = answer.choice;
+        var itemSelect = value.choice;
         var itemId = i;
         
 
@@ -60,30 +81,36 @@ function userInput(res) {
           {
             type: "input",
             message: "Enter quantity: ",
-            name: "quantity"
+            name: "quantity",
+            validate: function (value) {
+              if (isNaN(value) === false) {
+                  return true;
+              }
+              return false;
           }
-        ]).then(function(answer){
-          if ((res[itemId].stock_quantity - answer.quantity) > 0) {
+          }
+        ]).then(function(val){
+          if ((res[itemId].stock_quantity - val.quantity) > 0) {
             connection.query(
-              "UPDATE products SET stock_quantity='" + (res[itemId].stock_quantity - answer.quantity) +
-              "' WHERE product_name='" + itemSelect + "'",
+              "UPDATE products SET stock_quantity = " + (res[itemId].stock_quantity - val.quantity) + " WHERE item_id = '" + itemSelect + "'",
               function(err, result) {
                 if (err) {
                   throw err;
                 }
 
-                console.log("You have purchased " + itemSelect);
+                console.log("You have purchased item " + res[itemId].product_name + "");
                 showItem();
           });
         }
         else {
-          console.log("The item you selected can't be found, please select another");
+          console.log("The item you selected is out of stock, please select another");
           userInput(res);
             }
         });
       }
     }
   });
+});
 };
     
 
